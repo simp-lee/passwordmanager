@@ -224,9 +224,10 @@ func (s *Storage) GetAccounts() ([]*model.Account, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if s.vault == nil {
-		return nil, errors.ErrVaultLocked
+	if err := s.checkVaultUnlocked(); err != nil {
+		return nil, err
 	}
+
 	return s.vault.Accounts, nil
 }
 
@@ -236,8 +237,8 @@ func (s *Storage) GetAccountByID(id string) (*model.Account, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if s.vault == nil {
-		return nil, errors.ErrVaultLocked
+	if err := s.checkVaultUnlocked(); err != nil {
+		return nil, err
 	}
 
 	// Find account by ID
@@ -255,8 +256,8 @@ func (s *Storage) UpdateAccount(account *model.Account) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.vault == nil {
-		return errors.ErrVaultLocked
+	if err := s.checkVaultUnlocked(); err != nil {
+		return err
 	}
 
 	found := false
@@ -292,8 +293,8 @@ func (s *Storage) DeleteAccount(id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.vault == nil {
-		return errors.ErrVaultLocked
+	if err := s.checkVaultUnlocked(); err != nil {
+		return err
 	}
 
 	found := false
@@ -410,7 +411,7 @@ func (s *Storage) ImportVault(importPath string) error {
 }
 
 // ChangeMasterPassword changes the master password for the unlocked vault.
-// Generates new salt/hash/key, re-encrypts data, and saves.
+// Generates new salt/hash/key, re-encrypts all account passwords, and saves.
 // Requires exclusive lock.
 func (s *Storage) ChangeMasterPassword(newPassword string) error {
 	s.mu.Lock()
@@ -420,8 +421,10 @@ func (s *Storage) ChangeMasterPassword(newPassword string) error {
 		return errors.ErrVaultLocked
 	}
 
-	// Preserve current accounts
-	accounts := s.vault.Accounts
+	// Backup current vault data
+	oldKey := make([]byte, len(s.key))
+	copy(oldKey, s.key)
+	defer crypto.ClearBytes(oldKey)
 
 	// Generate new salt
 	newSalt, err := crypto.GenerateSalt()
@@ -436,15 +439,36 @@ func (s *Storage) ChangeMasterPassword(newPassword string) error {
 	// Derive new key
 	newKey := crypto.GenerateKey(newPassword, newSalt)
 
+	// Re-encrypt all account passwords with the new key
+	for _, account := range s.vault.Accounts {
+		// Decrypt old password
+		decryptedPassword, err := crypto.Decrypt(account.EncryptedPassword, oldKey)
+		if err != nil {
+			crypto.ClearBytes(newKey)
+			return errors.Wrap(err, fmt.Sprintf("failed to decrypt password for account ID %s", account.ID))
+		}
+
+		// Encrypt with new key
+		encryptedPassword, err := crypto.Encrypt(decryptedPassword, newKey)
+		if err != nil {
+			crypto.ClearBytes(decryptedPassword)
+			crypto.ClearBytes(newKey)
+			return errors.Wrap(err, fmt.Sprintf("failed to re-encrypt password for account ID %s", account.ID))
+		}
+		crypto.ClearBytes(decryptedPassword)
+
+		// Update account with new encrypted password
+		account.EncryptedPassword = encryptedPassword
+	}
+
 	// Update in-memory state with new salt and key
 	s.vault.Salt = newSalt
 	s.key = newKey
-	s.vault.Accounts = accounts // Ensure accounts are still set
 
 	// Save vault (will use new key for encryption and write new hash/salt)
 	err = s.saveVault(newMasterKeyHash)
 	if err != nil {
-		crypto.ClearBytes(newKey) // Clear new key if save failed
+		crypto.ClearBytes(newKey)
 		// Note: In-memory state might be inconsistent if save fails.
 		return err
 	}
@@ -520,8 +544,8 @@ func (s *Storage) SearchAccounts(query string) ([]*model.Account, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if s.vault == nil {
-		return nil, errors.ErrVaultLocked
+	if err := s.checkVaultUnlocked(); err != nil {
+		return nil, err
 	}
 
 	if query == "" {
@@ -568,4 +592,12 @@ func (s *Storage) getMasterKeyHashForSave() ([]byte, error) {
 	hash := make([]byte, hashLength)
 	copy(hash, fileData[:hashLength])
 	return hash, nil
+}
+
+// checkVaultUnlocked checks if the vault is unlocked (not nil and key is set).
+func (s *Storage) checkVaultUnlocked() error {
+	if s.vault == nil || s.key == nil {
+		return errors.ErrVaultLocked
+	}
+	return nil
 }
