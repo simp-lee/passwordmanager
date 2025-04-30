@@ -1,0 +1,20 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "password manager",
+  "outputfilename": "passwordmanager-gui",
+  "frontend:install": "",
+  "frontend:build": "",
+  "frontend:dev:watcher": "",
+  "frontend:dev:serverUrl": "http://localhost:34115",
+  "author": {
+    "name": "simp-lee",
+    "email": "peclhl@139.com"
+  },
+  "info": {
+    "companyName": "Simp-Lee",
+    "productName": "password manager",
+    "productVersion": "0.1.0",
+    "copyright": "© 2025 Simp-Lee",
+    "comments": "安全的本地密码管理工具"
+  }
+}

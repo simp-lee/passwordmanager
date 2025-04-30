@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>密码管理器</title>
+    <script src="./js/tailwindcss_3.4.16.js"></script>
+    <script defer src="./js/alpinejs_3.x.x.js"></script>
+    <script src="./js/app.js"></script>
+</head>
+
+<body class="bg-gray-100">
+    <div x-data="passwordManager" class="min-h-screen flex">
+        <!-- 侧边栏 -->
+        <div class="w-64 bg-gray-800 text-white flex flex-col">
+            <!-- 应用标题 -->
+            <div class="p-4 border-b border-gray-700">
+                <h1 class="text-xl font-bold">密码管理器</h1>
+            </div>
+
+            <!-- 搜索框和添加按钮 -->
+            <div class="p-3 border-b border-gray-700">
+                <div class="mb-3">
+                    <input x-model="searchQuery" type="text" placeholder="搜索账户..."
+                        class="w-full p-2 rounded bg-gray-700 text-white" @input="searchAccounts()" />
+                </div>
+                <button @click="newAccount()"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded flex items-center justify-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    添加账户
+                </button>
+            </div>
+
+            <!-- 工具菜单 -->
+            <div class="p-3 border-b border-gray-700">
+                <h2 class="text-xs uppercase tracking-wider text-gray-400 mb-2">工具</h2>
+                <div class="space-y-1">
+                    <button @click="openChangeMasterPassword()"
+                        class="w-full text-left px-3 py-2 hover:bg-gray-700 rounded flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z">
+                            </path>
+                        </svg>
+                        <span>更改主密码</span>
+                    </button>
+                    <button @click="exportVault()"
+                        class="w-full text-left px-3 py-2 hover:bg-gray-700 rounded flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd"
+                                d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        <span>导出密码库</span>
+                    </button>
+                    <button @click="exportToCsv()"
+                        class="w-full text-left px-3 py-2 hover:bg-gray-700 rounded flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd"
+                                d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm2 10a1 1 0 10-2 0v3a1 1 0 102 0v-3zm2-3a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zm4-1a1 1 0 10-2 0v7a1 1 0 102 0V8z"
+                                clip-rule="evenodd"></path>
+                        </svg>
+                        <span>导出为CSV</span>
+                    </button>
+                    <button @click="importVault()"
+                        class="w-full text-left px-3 py-2 hover:bg-gray-700 rounded flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path d="M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z" />
+                            <path d="M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z" />
+                            <path d="M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z" />
+                        </svg>
+                        <span>导入密码库</span>
+                    </button>
+                    <button @click="lockVault()"
+                        class="w-full text-left px-3 py-2 hover:bg-gray-700 rounded flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd"
+                                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                                clip-rule="evenodd"></path>
+                        </svg>
+                        <span>锁定密码库</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 账户列表 - 简化版 -->
+            <div class="flex-1 overflow-y-auto p-3">
+                <h2 class="text-xs uppercase tracking-wider text-gray-400 mb-2">账户</h2>
+                <div class="space-y-1">
+                    <template x-for="account in filteredAccounts" :key="account.id">
+                        <div @click="selectAccount(account.id)"
+                            class="p-3 rounded cursor-pointer hover:bg-gray-700 border border-transparent flex items-center"
+                            :class="selectedAccountId === account.id ? 'bg-gray-700 border-gray-500' : ''">
+                            <!-- 账户图标/首字母 -->
+                            <div
+                                class="w-8 h-8 flex-shrink-0 rounded-full bg-blue-600 flex items-center justify-center mr-2">
+                                <span x-text="account.platform.charAt(0).toUpperCase()"
+                                    class="font-bold text-sm"></span>
+                            </div>
+                            <div class="overflow-hidden">
+                                <div x-text="account.platform" class="font-medium truncate"></div>
+                                <div x-text="account.username || account.email" class="text-sm text-gray-400 truncate">
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- 无账户时显示的提示 -->
+                    <div x-show="filteredAccounts.length === 0" class="text-center py-3 text-gray-500">
+                        <span x-show="searchQuery">没有找到匹配的账户</span>
+                        <span x-show="!searchQuery && accounts.length === 0">没有账户，点击"添加账户"创建</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="flex-1 p-6 bg-gray-100" x-show="isUnlocked">
+            <!-- 账户详情 -->
+            <template x-if="selectedAccount">
+                <div class="bg-white rounded-lg shadow-sm p-6 max-w-2xl mx-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center mr-3">
+                                <span x-text="selectedAccount.platform.charAt(0).toUpperCase()"
+                                    class="font-bold text-lg text-white"></span>
+                            </div>
+                            <h2 class="text-2xl font-bold" x-text="selectedAccount.platform"></h2>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button @click="editAccount()"
+                                class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
+                                    </path>
+                                </svg>
+                                编辑
+                            </button>
+                            <button @click="confirmDeleteAccount()"
+                                class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded flex items-center">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                                    </path>
+                                </svg>
+                                删除
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 界面元素卡片 -->
+                    <div class="grid gap-6">
+                        <div class="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
+                            <div class="flex-1">
+                                <label class="block text-gray-700 font-medium mb-2">用户名</label>
+                                <div class="bg-gray-50 p-3 rounded border border-gray-200"
+                                    x-text="selectedAccount.username || '无'"></div>
+                            </div>
+
+                            <div class="flex-1">
+                                <label class="block text-gray-700 font-medium mb-2">邮箱</label>
+                                <div class="bg-gray-50 p-3 rounded border border-gray-200"
+                                    x-text="selectedAccount.email || '无'"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">网址</label>
+                            <div class="bg-gray-50 p-3 rounded border border-gray-200 break-all"
+                                x-text="selectedAccount.url || '无'"></div>
+                        </div>
+
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">密码</label>
+                            <div
+                                class="bg-gray-50 p-3 rounded border border-gray-200 flex justify-between items-center">
+                                <div class="font-mono" x-text="showPassword ? decryptedPassword : '••••••••••••'"></div>
+                                <div class="flex space-x-2">
+                                    <button @click="toggleShowPassword()" class="text-blue-500 hover:text-blue-700 p-1">
+                                        <svg x-show="!showPassword" class="w-5 h-5" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                                            </path>
+                                        </svg>
+                                        <svg x-show="showPassword" class="w-5 h-5" fill="none" stroke="currentColor"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21">
+                                            </path>
+                                        </svg>
+                                    </button>
+                                    <button @click="copyPassword()" class="text-blue-500 hover:text-blue-700 p-1"
+                                        title="复制到剪贴板">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3">
+                                            </path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mt-1 flex items-center" x-show="passwordStrengthInfo.show">
+                                <span class="text-sm text-gray-500 mr-2">密码强度:</span>
+                                <div class="flex items-center">
+                                    <div class="w-16 h-1.5 rounded-full" :class="{
+                                            'bg-red-500': passwordStrengthInfo.text === '弱',
+                                            'bg-yellow-500': passwordStrengthInfo.text === '中',
+                                            'bg-green-500': passwordStrengthInfo.text === '强'
+                                        }"></div>
+                                    <span class="ml-2 text-sm" :class="{
+                                            'text-red-500': passwordStrengthInfo.text === '弱',
+                                            'text-yellow-500': passwordStrengthInfo.text === '中',
+                                            'text-green-500': passwordStrengthInfo.text === '强'
+                                        }" x-text="passwordStrengthInfo.text"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2">备注</label>
+                            <div class="bg-gray-50 p-3 rounded border border-gray-200 min-h-[100px] whitespace-pre-wrap"
+                                x-text="selectedAccount.notes || '无'"></div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <!-- 空状态提示 -->
+            <template x-if="!selectedAccount && !isEditing">
+                <div class="flex h-full items-center justify-center">
+                    <div class="text-center p-8 bg-white rounded-lg shadow-sm max-w-md">
+                        <svg class="w-16 h-16 mx-auto text-gray-400" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                            </path>
+                        </svg>
+                        <h2 class="text-xl mt-4 mb-2 font-medium text-gray-700">还没有选择账户</h2>
+                        <p class="text-gray-500">请从左侧选择一个账户查看详情，或添加一个新账户</p>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- 添加/编辑账户表单 -->
+        <template x-if="isEditing">
+            <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40">
+                <div class="bg-white rounded-lg w-full max-w-md m-4 flex flex-col max-h-[90vh]">
+                    <!-- 标题区域 - 固定在顶部 -->
+                    <div class="p-6 border-b">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-xl font-bold" x-text="isNewAccount ? '添加账户' : '编辑账户'"></h2>
+                            <button @click="cancelEdit()" class="text-gray-400 hover:text-gray-600">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 滚动区域 - 内容可滚动 -->
+                    <div class="p-6 space-y-4 overflow-y-auto flex-grow">
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-1">平台/网站 <span
+                                    class="text-red-500">*</span></label>
+                            <input x-model="editingAccount.platform" type="text"
+                                class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-300 focus:border-blue-500 outline-none transition"
+                                placeholder="必填" />
+                        </div>
+
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-1">用户名</label>
+                            <input x-model="editingAccount.username" type="text"
+                                class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-300 focus:border-blue-500 outline-none transition" />
+                        </div>
+
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-1">邮箱</label>
+                            <input x-model="editingAccount.email" type="text"
+                                class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-300 focus:border-blue-500 outline-none transition" />
+                        </div>
+
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-1">网址</label>
+                            <input x-model="editingAccount.url" type="text"
+                                class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-300 focus:border-blue-500 outline-none transition" />
+                        </div>
+
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-1">密码</label>
+                            <div class="flex">
+                                <input x-model="editingPassword" :type="showEditPassword ? 'text' : 'password'"
+                                    class="w-full p-2 border rounded-l focus:ring-2 focus:ring-blue-300 focus:border-blue-500 outline-none transition" />
+                                <button @click="toggleShowEditPassword()"
+                                    class="bg-gray-100 hover:bg-gray-200 px-3 border-y border-r rounded-r">
+                                    <svg x-show="!showEditPassword" class="w-5 h-5" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                                        </path>
+                                    </svg>
+                                    <svg x-show="showEditPassword" class="w-5 h-5" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21">
+                                        </path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="flex justify-between mt-2 items-center">
+                                <button @click="togglePasswordOptions()"
+                                    class="text-blue-500 hover:text-blue-700 text-sm flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd"
+                                            d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
+                                            clip-rule="evenodd"></path>
+                                    </svg>
+                                    <span x-text="showPasswordOptions ? '隐藏密码选项' : '生成随机密码'"></span>
+                                </button>
+                                <span x-show="editingPassword" class="text-sm text-gray-500">
+                                    <div class="flex items-center">
+                                        <span class="mr-2">强度:</span>
+                                        <div class="w-12 h-1.5 rounded-full" :class="{
+                                                'bg-red-500': passwordStrength(editingPassword) === '弱',
+                                                'bg-yellow-500': passwordStrength(editingPassword) === '中',
+                                                'bg-green-500': passwordStrength(editingPassword) === '强'
+                                            }"></div>
+                                        <span class="ml-1" :class="{
+                                                'text-red-500': passwordStrength(editingPassword) === '弱',
+                                                'text-yellow-500': passwordStrength(editingPassword) === '中',
+                                                'text-green-500': passwordStrength(editingPassword) === '强'
+                                            }" x-text="passwordStrength(editingPassword)"></span>
+                                    </div>
+                                </span>
+                            </div>
+
+                            <!-- 密码生成选项 -->
+                            <div x-show="showPasswordOptions" class="mt-3 border-t pt-3 space-y-3">
+                                <div>
+                                    <label class="block text-gray-700 font-medium mb-2">密码长度: <span
+                                            x-text="generateOptions.Length"></span></label>
+                                    <input type="range" x-model.number="generateOptions.Length" min="8" max="64"
+                                        class="w-full" />
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div class="flex items-center">
+                                        <input type="checkbox" x-model="generateOptions.UseLowercase" id="use-lowercase"
+                                            class="mr-2 w-4 h-4 text-blue-600" />
+                                        <label for="use-lowercase" class="text-sm">小写字母</label>
+                                    </div>
+
+                                    <div class="flex items-center">
+                                        <input type="checkbox" x-model="generateOptions.UseUppercase" id="use-uppercase"
+                                            class="mr-2 w-4 h-4 text-blue-600" />
+                                        <label for="use-uppercase" class="text-sm">大写字母</label>
+                                    </div>
+
+                                    <div class="flex items-center">
+                                        <input type="checkbox" x-model="generateOptions.UseDigits" id="use-digits"
+                                            class="mr-2 w-4 h-4 text-blue-600" />
+                                        <label for="use-digits" class="text-sm">数字</label>
+                                    </div>
+
+                                    <div class="flex items-center">
+                                        <input type="checkbox" x-model="generateOptions.UseSymbols" id="use-symbols"
+                                            class="mr-2 w-4 h-4 text-blue-600" />
+                                        <label for="use-symbols" class="text-sm">特殊符号</label>
+                                    </div>
+
+                                    <div class="flex items-center">
+                                        <input type="checkbox" x-model="generateOptions.ExcludeSimilar"
+                                            id="exclude-similar" class="mr-2 w-4 h-4 text-blue-600" />
+                                        <label for="exclude-similar" class="text-sm">排除相似字符</label>
+                                    </div>
+
+                                    <div class="flex items-center">
+                                        <input type="checkbox" x-model="generateOptions.ExcludeAmbiguous"
+                                            id="exclude-ambiguous" class="mr-2 w-4 h-4 text-blue-600" />
+                                        <label for="exclude-ambiguous" class="text-sm">排除易混淆字符</label>
+                                    </div>
+                                </div>
+
+                                <div class="flex justify-center pt-2">
+                                    <button @click="generatePasswordForEdit()"
+                                        class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                                        生成密码
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-1">备注</label>
+                            <textarea x-model="editingAccount.notes"
+                                class="w-full p-2 border rounded h-24 focus:ring-2 focus:ring-blue-300 focus:border-blue-500 outline-none transition"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- 按钮区域 - 固定在底部 -->
+                    <div class="p-6 border-t bg-white">
+                        <div class="flex justify-end space-x-2">
+                            <button @click="cancelEdit()"
+                                class="px-4 py-2 border rounded text-gray-700 hover:bg-gray-100">
+                                取消
+                            </button>
+                            <button @click="saveAccount()"
+                                class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+                                :disabled="!editingAccount.platform">
+                                保存
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+        <!-- 登录界面 -->
+        <template x-if="!isUnlocked">
+            <div class="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-75 z-50">
+                <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+                    <div class="text-center mb-6">
+                        <svg class="w-16 h-16 mx-auto mb-4 text-blue-500" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+                            </path>
+                        </svg>
+                        <h2 class="text-2xl font-bold text-gray-800">密码管理器</h2>
+                    </div>
+
+                    <template x-if="!isVaultExists">
+                        <div>
+                            <p class="mb-4 text-center text-gray-600">欢迎使用密码管理器！请设置主密码以创建您的密码库。</p>
+                            <div class="mb-4">
+                                <label class="block text-gray-700 font-medium mb-1">主密码</label>
+                                <input x-model="masterPassword" type="password"
+                                    class="w-full p-3 border rounded focus:ring-2 focus:ring-blue-300 focus:border-blue-500 outline-none transition"
+                                    placeholder="请输入主密码" @keyup.enter="createVault()" />
+                            </div>
+                            <div class="mb-6">
+                                <label class="block text-gray-700 font-medium mb-1">确认主密码</label>
+                                <input x-model="confirmMasterPassword" type="password"
+                                    class="w-full p-3 border rounded focus:ring-2 focus:ring-blue-300 focus:border-blue-500 outline-none transition"
+                                    placeholder="请再次输入主密码" @keyup.enter="createVault()" />
+                            </div>
+                            <button @click="createVault()"
+                                class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded transition"
+                                :disabled="masterPassword.length < 8 || masterPassword !== confirmMasterPassword"
+                                :class="{'opacity-50 cursor-not-allowed': masterPassword.length < 8 || masterPassword !== confirmMasterPassword}">
+                                创建密码库
+                            </button>
+                            <p class="mt-2 text-sm text-red-500" x-show="errorMessage" x-text="errorMessage"></p>
+                            <p class="mt-2 text-sm text-gray-500"
+                                x-show="masterPassword.length > 0 && masterPassword.length < 8">
+                                主密码至少需要8个字符
+                            </p>
+                            <p class="mt-2 text-sm text-red-500"
+                                x-show="confirmMasterPassword.length > 0 && masterPassword !== confirmMasterPassword">
+                                两次输入的密码不匹配
+                            </p>
+                        </div>
+                    </template>
+
+                    <template x-if="isVaultExists">
+                        <div>
+                            <p class="mb-6 text-center text-gray-600">请输入主密码解锁您的密码库</p>
+                            <div class="mb-6">
+                                <label class="block text-gray-700 font-medium mb-1">主密码</label>
+                                <input x-model="masterPassword" type="password"
+                                    class="w-full p-3 border rounded focus:ring-2 focus:ring-blue-300 focus:border-blue-500 outline-none transition"
+                                    placeholder="请输入主密码" @keyup.enter="unlockVault()" />
+                            </div>
+                            <button @click="unlockVault()"
+                                class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded transition"
+                                :disabled="!masterPassword" :class="{'opacity-50 cursor-not-allowed': !masterPassword}">
+                                解锁
+                            </button>
+                            <p class="mt-2 text-sm text-red-500" x-show="errorMessage" x-text="errorMessage"></p>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
+
+        <!-- 更改主密码对话框 -->
+        <template x-if="isChangingMasterPassword">
+            <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div class="bg-white rounded-lg p-6 w-full max-w-md m-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold">更改主密码</h2>
+                        <button @click="cancelChangeMasterPassword()" class="text-gray-400 hover:text-gray-600">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-1">当前主密码</label>
+                            <input x-model="currentMasterPassword" type="password"
+                                class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-300 focus:border-blue-500 outline-none transition"
+                                placeholder="请输入当前主密码" />
+                        </div>
+
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-1">新主密码</label>
+                            <input x-model="newMasterPassword" type="password"
+                                class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-300 focus:border-blue-500 outline-none transition"
+                                placeholder="请输入新主密码" />
+                        </div>
+
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-1">确认新主密码</label>
+                            <input x-model="confirmNewMasterPassword" type="password"
+                                class="w-full p-2 border rounded focus:ring-2 focus:ring-blue-300 focus:border-blue-500 outline-none transition"
+                                placeholder="请再次输入新主密码" />
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end space-x-2 mt-6">
+                        <button @click="cancelChangeMasterPassword()"
+                            class="px-4 py-2 border rounded text-gray-700 hover:bg-gray-100">
+                            取消
+                        </button>
+                        <button @click="saveMasterPassword()"
+                            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition"
+                            :disabled="!currentMasterPassword || newMasterPassword.length < 8 || newMasterPassword !== confirmNewMasterPassword"
+                            :class="{'opacity-50 cursor-not-allowed': !currentMasterPassword || newMasterPassword.length < 8 || newMasterPassword !== confirmNewMasterPassword}">
+                            保存
+                        </button>
+                    </div>
+
+                    <p class="mt-2 text-sm text-red-500" x-show="errorMessage" x-text="errorMessage"></p>
+                    <p class="mt-2 text-sm text-gray-500"
+                        x-show="newMasterPassword.length > 0 && newMasterPassword.length < 8">
+                        主密码至少需要8个字符
+                    </p>
+                    <p class="mt-2 text-sm text-red-500"
+                        x-show="confirmNewMasterPassword.length > 0 && newMasterPassword !== confirmNewMasterPassword">
+                        两次输入的密码不匹配
+                    </p>
+                </div>
+            </div>
+        </template>
+
+        <!-- 通知 -->
+        <div x-show="notification.show" x-transition
+            class="fixed bottom-4 right-4 bg-gray-800 text-white p-3 px-4 rounded-lg shadow-lg flex items-center">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div x-text="notification.message"></div>
+        </div>
+    </div>
+</body>
+
+</html>
