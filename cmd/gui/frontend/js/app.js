@@ -76,12 +76,21 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        lockVault() {
+        async lockVault() {
             this.isUnlocked = false;
             this.selectedAccount = null;
             this.selectedAccountId = null;
             this.accounts = [];
             this.filteredAccounts = [];
+            this.masterPassword = '';
+
+            // 重新检查密码库是否存在
+            try {
+                this.isVaultExists = await window.go.backend.App.IsVaultExists();
+            } catch (error) {
+                console.error('检查密码库存在状态错误:', error);
+            }
+
             this.showNotification('密码库已锁定');
         },
 
@@ -99,6 +108,7 @@ document.addEventListener('alpine:init', () => {
             try {
                 await window.go.backend.App.CreateVault(this.masterPassword);
                 this.isUnlocked = true;
+                this.isVaultExists = true;
                 this.errorMessage = '';
                 this.masterPassword = '';
                 this.confirmMasterPassword = '';
@@ -204,13 +214,13 @@ document.addEventListener('alpine:init', () => {
                 this.showNotification('平台/网站名称是必填项');
                 return;
             }
-        
+
             try {
                 const platformName = this.editingAccount.platform;
                 const username = this.editingAccount.username;
                 const isNew = this.isNewAccount;
                 const originalId = this.editingAccount.id;
-        
+
                 if (isNew) {
                     await window.go.backend.App.AddAccount(this.editingAccount, this.editingPassword);
                     this.showNotification('账户已添加');
@@ -219,23 +229,23 @@ document.addEventListener('alpine:init', () => {
                     await window.go.backend.App.UpdateAccount(this.editingAccount, passwordToUpdate);
                     this.showNotification('账户已更新');
                 }
-        
+
                 // 关闭编辑界面，避免在加载期间出现问题
                 this.isEditing = false;
-                
+
                 // 重新加载所有账户
                 await this.loadAccounts();
-                
+
                 if (!isNew) {
                     // 编辑情况：选择原始ID的账户
                     this.selectAccount(originalId);
                 } else {
                     // 新增情况：根据平台名和用户名匹配新添加的账户
-                    const matchedAccount = this.accounts.find(acc => 
-                        acc.platform === platformName && 
+                    const matchedAccount = this.accounts.find(acc =>
+                        acc.platform === platformName &&
                         acc.username === username
                     );
-                    
+
                     if (matchedAccount) {
                         this.selectAccount(matchedAccount.id);
                     }
@@ -317,7 +327,7 @@ document.addEventListener('alpine:init', () => {
                 } catch (error) {
                     console.error('搜索账户错误:', error);
                     this.showNotification('搜索账户失败');
-                    this.filteredAccounts = this.accounts.filter(account => 
+                    this.filteredAccounts = this.accounts.filter(account =>
                         account.platform.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
                         (account.username && account.username.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
                         (account.email && account.email.toLowerCase().includes(this.searchQuery.toLowerCase()))
