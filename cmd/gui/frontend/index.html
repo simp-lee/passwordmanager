@@ -93,7 +93,7 @@
                 </div>
             </div>
 
-            <!-- 账户列表 - 简化版 -->
+            <!-- 账户列表 -->
             <div class="flex-1 overflow-y-auto p-3">
                 <h2 class="text-xs uppercase tracking-wider text-gray-400 mb-2">账户</h2>
                 <div class="space-y-1">
@@ -122,118 +122,147 @@
                     </div>
                 </div>
             </div>
+
+            <!-- GitHub Star 提示 -->
+            <div class="mt-auto p-3 border-t border-gray-700 text-center text-xs text-gray-400">
+                <p>如果您觉得此应用有用，请考虑</p>
+                <button @click="openGitHubPage()"
+                    class="text-blue-400 hover:text-blue-300 flex items-center justify-center mt-1 w-full">
+                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                            d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z">
+                        </path>
+                    </svg>
+                    在 GitHub 上为本项目点亮一颗星
+                </button>
+            </div>
         </div>
 
         <!-- 主内容区 -->
-        <div class="flex-1 p-6 bg-gray-100" x-show="isUnlocked">
+        <div class="flex-1 flex flex-col bg-gray-100" x-show="isUnlocked">
             <!-- 账户详情 -->
             <template x-if="selectedAccount">
-                <div class="bg-white rounded-lg shadow-sm p-6 max-w-2xl mx-auto">
-                    <div class="flex justify-between items-center mb-6">
-                        <div class="flex items-center">
-                            <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center mr-3">
-                                <span x-text="selectedAccount.platform.charAt(0).toUpperCase()"
-                                    class="font-bold text-lg text-white"></span>
-                            </div>
-                            <h2 class="text-2xl font-bold" x-text="selectedAccount.platform"></h2>
-                        </div>
-                        <div class="flex space-x-2">
-                            <button @click="editAccount()"
-                                class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded flex items-center">
-                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
-                                    </path>
-                                </svg>
-                                编辑
-                            </button>
-                            <button @click="confirmDeleteAccount()"
-                                class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded flex items-center">
-                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
-                                    </path>
-                                </svg>
-                                删除
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- 界面元素卡片 -->
-                    <div class="grid gap-6">
-                        <div class="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
-                            <div class="flex-1">
-                                <label class="block text-gray-700 font-medium mb-2">用户名</label>
-                                <div class="bg-gray-50 p-3 rounded border border-gray-200"
-                                    x-text="selectedAccount.username || '无'"></div>
-                            </div>
-
-                            <div class="flex-1">
-                                <label class="block text-gray-700 font-medium mb-2">邮箱</label>
-                                <div class="bg-gray-50 p-3 rounded border border-gray-200"
-                                    x-text="selectedAccount.email || '无'"></div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-gray-700 font-medium mb-2">网址</label>
-                            <div class="bg-gray-50 p-3 rounded border border-gray-200 break-all"
-                                x-text="selectedAccount.url || '无'"></div>
-                        </div>
-
-                        <div>
-                            <label class="block text-gray-700 font-medium mb-2">密码</label>
-                            <div
-                                class="bg-gray-50 p-3 rounded border border-gray-200 flex justify-between items-center">
-                                <div class="font-mono" x-text="showPassword ? decryptedPassword : '••••••••••••'"></div>
+                <div class="fixed inset-y-0 left-64 right-0 flex items-center justify-center z-40">
+                    <!-- 整个详情面板作为一个整体在右侧区域内居中 -->
+                    <div class="bg-white rounded-lg shadow-lg w-full max-w-3xl mx-6 overflow-auto max-h-[90vh]">
+                        <!-- 标题栏 -->
+                        <div class="border-b bg-gray-50 p-6 sticky top-0 z-10">
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center">
+                                    <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center mr-3">
+                                        <span x-text="selectedAccount.platform.charAt(0).toUpperCase()"
+                                            class="font-bold text-lg text-white"></span>
+                                    </div>
+                                    <h2 class="text-2xl font-bold" x-text="selectedAccount.platform"></h2>
+                                </div>
                                 <div class="flex space-x-2">
-                                    <button @click="toggleShowPassword()" class="text-blue-500 hover:text-blue-700 p-1">
-                                        <svg x-show="!showPassword" class="w-5 h-5" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
+                                    <button @click="editAccount()"
+                                        class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded flex items-center">
+                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
                                             </path>
                                         </svg>
-                                        <svg x-show="showPassword" class="w-5 h-5" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21">
-                                            </path>
-                                        </svg>
+                                        编辑
                                     </button>
-                                    <button @click="copyPassword()" class="text-blue-500 hover:text-blue-700 p-1"
-                                        title="复制到剪贴板">
+                                    <button @click="confirmDeleteAccount()"
+                                        class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded flex items-center">
+                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+                                            </path>
+                                        </svg>
+                                        删除
+                                    </button>
+                                    <button @click="selectedAccount = null"
+                                        class="text-gray-400 hover:text-gray-600 ml-2">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3">
-                                            </path>
+                                                d="M6 18L18 6M6 6l12 12"></path>
                                         </svg>
                                     </button>
                                 </div>
                             </div>
-                            <div class="mt-1 flex items-center" x-show="passwordStrengthInfo.show">
-                                <span class="text-sm text-gray-500 mr-2">密码强度:</span>
-                                <div class="flex items-center">
-                                    <div class="w-16 h-1.5 rounded-full" :class="{
-                                            'bg-red-500': passwordStrengthInfo.text === '弱',
-                                            'bg-yellow-500': passwordStrengthInfo.text === '中',
-                                            'bg-green-500': passwordStrengthInfo.text === '强'
-                                        }"></div>
-                                    <span class="ml-2 text-sm" :class="{
-                                            'text-red-500': passwordStrengthInfo.text === '弱',
-                                            'text-yellow-500': passwordStrengthInfo.text === '中',
-                                            'text-green-500': passwordStrengthInfo.text === '强'
-                                        }" x-text="passwordStrengthInfo.text"></span>
-                                </div>
-                            </div>
                         </div>
 
-                        <div>
-                            <label class="block text-gray-700 font-medium mb-2">备注</label>
-                            <div class="bg-gray-50 p-3 rounded border border-gray-200 min-h-[100px] whitespace-pre-wrap"
-                                x-text="selectedAccount.notes || '无'"></div>
+                        <!-- 内容区域 -->
+                        <div class="p-6 grid gap-6">
+                            <div class="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
+                                <div class="flex-1">
+                                    <label class="block text-gray-700 font-medium mb-2">用户名</label>
+                                    <div class="bg-gray-50 p-3 rounded border border-gray-200"
+                                        x-text="selectedAccount.username || '无'"></div>
+                                </div>
+
+                                <div class="flex-1">
+                                    <label class="block text-gray-700 font-medium mb-2">邮箱</label>
+                                    <div class="bg-gray-50 p-3 rounded border border-gray-200"
+                                        x-text="selectedAccount.email || '无'"></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-gray-700 font-medium mb-2">网址</label>
+                                <div class="bg-gray-50 p-3 rounded border border-gray-200 break-all"
+                                    x-text="selectedAccount.url || '无'"></div>
+                            </div>
+
+                            <div>
+                                <label class="block text-gray-700 font-medium mb-2">密码</label>
+                                <div
+                                    class="bg-gray-50 p-3 rounded border border-gray-200 flex justify-between items-center">
+                                    <div class="font-mono" x-text="showPassword ? decryptedPassword : '••••••••••••'">
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <button @click="toggleShowPassword()"
+                                            class="text-blue-500 hover:text-blue-700 p-1">
+                                            <svg x-show="!showPassword" class="w-5 h-5" fill="none"
+                                                stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                                                </path>
+                                            </svg>
+                                            <svg x-show="showPassword" class="w-5 h-5" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21">
+                                                </path>
+                                            </svg>
+                                        </button>
+                                        <button @click="copyPassword()" class="text-blue-500 hover:text-blue-700 p-1"
+                                            title="复制到剪贴板">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3">
+                                                </path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mt-1 flex items-center" x-show="passwordStrengthInfo.show">
+                                    <span class="text-sm text-gray-500 mr-2">密码强度:</span>
+                                    <div class="flex items-center">
+                                        <div class="w-16 h-1.5 rounded-full" :class="{
+                                'bg-red-500': passwordStrengthInfo.text === '弱',
+                                'bg-yellow-500': passwordStrengthInfo.text === '中',
+                                'bg-green-500': passwordStrengthInfo.text === '强'
+                            }"></div>
+                                        <span class="ml-2 text-sm" :class="{
+                                'text-red-500': passwordStrengthInfo.text === '弱',
+                                'text-yellow-500': passwordStrengthInfo.text === '中',
+                                'text-green-500': passwordStrengthInfo.text === '强'
+                            }" x-text="passwordStrengthInfo.text"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-gray-700 font-medium mb-2">备注</label>
+                                <div class="bg-gray-50 p-3 rounded border border-gray-200 min-h-[100px] whitespace-pre-wrap"
+                                    x-text="selectedAccount.notes || '无'"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -241,8 +270,8 @@
 
             <!-- 空状态提示 -->
             <template x-if="!selectedAccount && !isEditing">
-                <div class="flex h-full items-center justify-center">
-                    <div class="text-center p-8 bg-white rounded-lg shadow-sm max-w-md">
+                <div class="fixed inset-y-0 left-64 right-0 flex items-center justify-center z-30">
+                    <div class="text-center p-8 bg-white rounded-lg shadow-lg max-w-md">
                         <svg class="w-16 h-16 mx-auto text-gray-400" fill="none" stroke="currentColor"
                             viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -250,7 +279,15 @@
                             </path>
                         </svg>
                         <h2 class="text-xl mt-4 mb-2 font-medium text-gray-700">还没有选择账户</h2>
-                        <p class="text-gray-500">请从左侧选择一个账户查看详情，或添加一个新账户</p>
+                        <p class="text-gray-500 mb-6">请从左侧选择一个账户查看详情，或添加一个新账户</p>
+                        <button @click="newAccount()" 
+                            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded flex items-center mx-auto">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                    d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            添加账户
+                        </button>
                     </div>
                 </div>
             </template>

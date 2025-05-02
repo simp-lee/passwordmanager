@@ -136,12 +136,15 @@ document.addEventListener('alpine:init', () => {
             this.showPassword = false;
             this.decryptedPassword = '';
             this.passwordStrengthInfo.show = false;
+            this.isEditing = false;
 
             try {
                 this.selectedAccount = await window.go.backend.App.GetAccountByID(id);
             } catch (error) {
-                console.error('选择账户错误:', error);
+                console.error('获取账户详情错误:', error);
                 this.showNotification('加载账户详情失败');
+                this.selectedAccount = null;
+                this.selectedAccountId = null;
             }
         },
 
@@ -435,6 +438,10 @@ document.addEventListener('alpine:init', () => {
             setTimeout(() => {
                 this.notification.show = false;
             }, 3000);
+        },
+
+        openGitHubPage() {
+            window.runtime.BrowserOpenURL("https://github.com/simp-lee/passwordmanager");
         }
     }));
 });
