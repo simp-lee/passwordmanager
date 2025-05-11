@@ -4,34 +4,73 @@
 
 ## Introduction
 
-This is a command-line password manager for securely storing and managing account information for various websites and applications. It uses strong encryption to protect your password data and provides a rich set of management features. This program supports both Chinese (zh) and English (en) language interfaces.
+This password manager provides both a command-line interface (CLI) and a graphical user interface (GUI) built with [Wails](https://wails.io/), for securely storing and managing account information for various websites and applications. It uses strong encryption to protect your password data and provides a rich set of management features. This program supports both Chinese (zh) and English (en) language interfaces.
 
 ## Features
 
-- AES-256 encryption to protect your password data
-- Generation of high-strength random passwords
-- Secure storage of account information including usernames, passwords, URLs, etc.
-- Import/export of vault data
-- Master password changing
-- Account search and filtering
-- Password copying to clipboard with automatic clearing
-- Bilingual interface supporting Chinese and English
+- **Local & Lightweight**: Runs entirely on your local machine with no external dependencies or cloud services
+- **Strong Security**: AES-256 encryption to protect your password data
+- **Password Generation**: Creation of high-strength random passwords with customizable options
+- **Comprehensive Storage**: Secure storage of account information including usernames, passwords, URLs, etc.
+- **Intuitive GUI**: Graphical User Interface for easier management and improved user experience
+- **Import/Export**: Flexible options for vault data backup and restoration
+- **Master Password Management**: Secure master password changing capability
+- **Advanced Search**: Account search and filtering by platform, username, or email
+- **Clipboard Integration**: Password copying to clipboard with automatic clearing for security
+- **Bilingual Interface**: Support for both Chinese and English languages
+
+## Screenshots
+
+![Main Interface](screenshots/gui_main_interface.png)
+
+![Account General](screenshots/gui_account_general.png)
+
+![Add/Edit Account](screenshots/gui_add_account.png)
+
+![Account Details](screenshots/gui_account_details.png)
 
 ## Installation
 
-### Compile from Source
+### Building from Source
 
-```bash
-git clone https://github.com/simp-lee/passwordmanager.git
-cd passwordmanager
-go build -o passwordmanager cmd/main.go
-```
+This project includes build scripts for Linux/macOS (`build.sh`) and Windows (`build.bat`) that compile both the command-line (CLI) and graphical user interface (GUI) versions of the application.
 
-After compilation, move the binary to your PATH:
+1.  Clone the repository:
+    ```bash
+    git clone https://github.com/simp-lee/passwordmanager.git
+    cd passwordmanager
+    ```
+2.  Run the build script for your operating system:
+    -   For Linux/macOS:
+        ```bash
+        ./build.sh
+        ```
+    -   For Windows:
+        ```bat
+        .\build.bat
+        ```
+    This will create the executables in the `bin` directory. The GUI application is built using [Wails](https://wails.io/). The scripts will attempt to install Wails if it's not already present.
 
-```bash
-sudo mv passwordmanager /usr/local/bin/
-```
+    After building, you can find the executables:
+    -   CLI: `bin/passwordmanager` (or `bin\passwordmanager.exe` on Windows)
+    -   GUI: `bin/passwordmanager-gui` (or `bin\passwordmanager-gui.exe` on Windows)
+
+    You can then move these executables to a directory in your system's PATH if desired.
+
+### Direct Installation
+
+For users who prefer not to build from source, pre-compiled binaries are available for Windows, macOS, and Linux in the releases section of the repository. Simply download the appropriate version for your operating system and run it directly.
+
+## Local Deployment Benefits
+
+This password manager is designed with these key advantages:
+
+1. **No Internet Required**: Works completely offline without any network connectivity
+2. **No Cloud Storage**: All data stored locally on your machine for maximum privacy
+3. **No External Dependencies**: Self-contained application with minimal system requirements
+4. **Portable**: Can be run from a USB drive or any storage medium
+5. **Lightweight**: Small memory footprint and efficient resource usage
+6. **No Subscription Fees**: Free to use with no recurring payments
 
 ## Language Settings
 
@@ -191,6 +230,19 @@ passwordmanager export-csv <export-path>
 
 Exports account data to CSV format. **Warning: Passwords in CSV files are stored in plain text. Handle the exported file with care.**
 
+## GUI Features
+
+The graphical interface provides an intuitive way to manage your passwords:
+
+1. **Visual Password Management**: Easily view, add, edit, and delete accounts
+2. **Password Strength Indicator**: Visual feedback on password strength (Weak/Medium/Strong)
+3. **Customizable Password Generation**: Generate passwords with specific requirements through a simple interface
+4. **One-Click Copy**: Copy passwords to clipboard with a single click
+5. **Searchable Account List**: Quickly find accounts by typing in the search box
+6. **Secure by Default**: Automatic locking of the vault when inactive
+7. **Visual Password Options**: Toggle password visibility with an eye icon
+8. **Streamlined Export/Import**: Simple dialogs for securely importing and exporting data
+
 ## Security Features
 
 1. **Strong Encryption**: Uses AES-256-GCM encryption and PBKDF2 key derivation with 100,000 iterations
@@ -198,6 +250,7 @@ Exports account data to CSV format. **Warning: Passwords in CSV files are stored
 3. **Clipboard Protection**: Passwords copied to the clipboard are automatically cleared after 30 seconds
 4. **Input Protection**: Password input is not displayed on the screen
 5. **Security Confirmation**: Dangerous operations (such as deleting accounts or exporting plain text) require confirmation
+6. **Local Storage Only**: No data is ever sent over the network or stored in cloud services
 
 ## Security Recommendations
 
@@ -205,6 +258,7 @@ Exports account data to CSV format. **Warning: Passwords in CSV files are stored
 2. **Regular Backups**: Use the `export` command to back up your vault regularly.
 3. **Regular Password Updates**: Periodically update passwords for important accounts.
 4. **Avoid Plain Text Export**: Unless necessary, avoid using `export-csv` to export passwords in plain text.
+5. **Secure Environment**: Use the password manager on a device with up-to-date security patches and antivirus protection
 
 ## Troubleshooting
 
@@ -298,34 +352,73 @@ passwordmanager export ~/backup/vault-backup-2025-04-26.encrypted
 
 ## 简介
 
-这是一个基于命令行的密码管理器，用于安全地存储和管理您的各种网站和应用的账户信息。它使用强加密技术保护您的密码数据，并提供了丰富的管理功能。本程序支持中文(zh)和英文(en)两种语言界面。
+本密码管理器提供命令行界面 (CLI) 和一个使用 [Wails](https://wails.io/) 构建的图形用户界面 (GUI)，用于安全地存储和管理您的各种网站和应用的账户信息。它使用强加密技术保护您的密码数据，并提供了丰富的管理功能。本程序支持中文(zh)和英文(en)两种语言界面。
 
 ## 功能特点
 
-- 使用 AES-256 加密保护您的密码数据
-- 生成高强度随机密码
-- 安全存储账户的用户名、密码、URL等信息
-- 支持导入/导出保险库数据
-- 支持修改主密码
-- 支持搜索和过滤账户信息
-- 支持密码复制到剪贴板并自动清除
-- 支持中英文双语界面
+- **本地化与轻量级**：完全在本地运行，无需外部依赖或云服务
+- **强大安全性**：使用 AES-256 加密保护您的密码数据
+- **密码生成**：创建高强度随机密码，支持自定义选项
+- **全面存储**：安全存储账户的用户名、密码、URL等信息
+- **直观界面**：图形用户界面 (GUI)，操作直观方便，提升用户体验
+- **导入导出**：灵活的保险库数据备份和恢复选项
+- **主密码管理**：安全的主密码更改功能
+- **高级搜索**：支持按平台、用户名或邮箱搜索和过滤账户
+- **剪贴板集成**：支持密码复制到剪贴板并自动清除
+- **双语界面**：支持中文和英文两种语言
+
+## 界面截图
+
+![Main Interface](screenshots/gui_main_interface.png)
+
+![Account General](screenshots/gui_account_general.png)
+
+![Add/Edit Account](screenshots/gui_add_account.png)
+
+![Account Details](screenshots/gui_account_details.png)
 
 ## 安装
 
 ### 从源码编译
 
-```bash
-git clone https://github.com/simp-lee/passwordmanager.git
-cd passwordmanager
-go build -o passwordmanager cmd/main.go
-```
+本项目包含了适用于 Linux/macOS (`build.sh`) 和 Windows (`build.bat`) 的构建脚本，这些脚本会编译应用程序的命令行 (CLI) 和图形用户界面 (GUI) 两个版本。
 
-安装后，将编译好的二进制文件移动到您的 PATH 路径中：
+1.  克隆仓库：
+    ```bash
+    git clone https://github.com/simp-lee/passwordmanager.git
+    cd passwordmanager
+    ```
+2.  运行适用于您操作系统的构建脚本：
+    -   对于 Linux/macOS:
+        ```bash
+        ./build.sh
+        ```
+    -   对于 Windows:
+        ```bat
+        .\build.bat
+        ```
+    这将在 `bin` 目录下生成可执行文件。GUI 应用程序是使用 [Wails](https://wails.io/) 构建的。如果 Wails 尚未安装，脚本会尝试安装它。
 
-```bash
-sudo mv passwordmanager /usr/local/bin/
-```
+    构建完成后，您可以找到可执行文件：
+    -   CLI: `bin/passwordmanager` (或 Windows 上的 `bin\passwordmanager.exe`)
+    -   GUI: `bin/passwordmanager-gui` (或 Windows 上的 `bin\passwordmanager-gui.exe`)
+
+    如果需要，您可以将这些可执行文件移动到系统 PATH 路径下的某个目录中。
+
+### 直接安装
+
+对于不想从源码构建的用户，仓库的发布部分提供了适用于 Windows、macOS 和 Linux 的预编译二进制文件。只需下载适合您操作系统的版本并直接运行即可。
+
+## 本地部署优势
+
+这个密码管理器设计具有以下关键优势：
+
+1. **无需互联网**：完全离线工作，不需要任何网络连接
+2. **无云存储**：所有数据存储在本地设备上，确保最大隐私
+3. **无外部依赖**：自包含应用程序，系统需求最小化
+4. **便携性**：可以从 USB 驱动器或任何存储介质运行
+5. **轻量级**：内存占用小，资源使用高效
+6. **无订阅费**：免费使用，无需定期付款
 
 ## 语言设置
 
@@ -485,6 +578,19 @@ passwordmanager export-csv <导出路径>
 
 将账户数据导出为CSV格式。**警告：CSV文件中的密码是明文存储的，请妥善保管导出的文件**。
 
+## 图形界面功能
+
+图形界面提供了直观的密码管理方式：
+
+1. **可视化密码管理**：轻松查看、添加、编辑和删除账户
+2. **密码强度指示器**：对密码强度的视觉反馈（弱/中/强）
+3. **可自定义密码生成**：通过简单的界面生成符合特定要求的密码
+4. **一键复制**：单击即可将密码复制到剪贴板
+5. **可搜索账户列表**：在搜索框中输入即可快速找到账户
+6. **默认安全**：不活动时自动锁定保险库
+7. **密码可视化选项**：通过眼睛图标切换密码可见性
+8. **简化导出/导入**：用于安全导入和导出数据的简单对话框
+
 ## 安全特性
 
 1. **强加密**：使用AES-256-GCM加密和PBKDF2密钥派生，迭代次数为100,000
@@ -492,6 +598,7 @@ passwordmanager export-csv <导出路径>
 3. **剪贴板保护**：复制到剪贴板的密码会在30秒后自动清除
 4. **输入保护**：密码输入不会显示在屏幕上
 5. **安全确认**：危险操作（如删除账户、导出明文）前需要确认
+6. **仅本地存储**：数据永远不会通过网络发送或存储在云服务中
 
 ## 安全性建议
 
@@ -499,6 +606,7 @@ passwordmanager export-csv <导出路径>
 2. **定期备份**：使用 `export` 命令定期备份您的保险库。
 3. **定期更新密码**：定期为重要账户更新密码。
 4. **避免明文导出**：除非必要，避免使用 `export-csv` 导出明文密码。
+5. **安全环境**：在已安装最新安全补丁和防病毒保护的设备上使用密码管理器
 
 ## 故障排除
 
