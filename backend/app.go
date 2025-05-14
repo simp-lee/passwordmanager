@@ -90,6 +90,20 @@ func (a *App) AddAccount(account *model.Account, password string) error {
 	account.CreatedAt = now
 	account.UpdatedAt = now
 
+	// Get the current maximum sort order
+	// This is used to determine the sort order for the new account
+	accounts, err := a.store.GetAccounts()
+	if err != nil {
+		return fmt.Errorf("failed to get accounts: %w", err)
+	}
+	maxOrder := 0
+	for _, acc := range accounts {
+		if acc.SortOrder > maxOrder {
+			maxOrder = acc.SortOrder
+		}
+	}
+	account.SortOrder = maxOrder + 1
+
 	// Encrypt the password before storing it
 	encrptedPassword, err := crypto.Encrypt([]byte(password), a.store.GetEncryptionKey())
 	if err != nil {
@@ -339,4 +353,36 @@ func (a *App) ExportCsv() error {
 	}
 
 	return a.store.ExportToCSV(path)
+}
+
+// UpdateAccountsOrder 更新账户的排序顺序
+func (a *App) UpdateAccountsOrder(accountIDs []string) error {
+	if !a.isUnlocked {
+		return errors.ErrVaultLocked
+	}
+
+	accounts, err := a.store.GetAccounts()
+	if err != nil {
+		return err
+	}
+
+	// 创建ID到账户的映射，便于快速查找
+	accountMap := make(map[string]*model.Account)
+	for _, account := range accounts {
+		accountMap[account.ID] = account
+	}
+
+	// 更新每个账户的排序顺序
+	for i, id := range accountIDs {
+		account, ok := accountMap[id]
+		if !ok {
+			return errors.ErrAccountNotFound
+		}
+		account.SortOrder = i + 1
+		if err := a.store.UpdateAccount(account); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

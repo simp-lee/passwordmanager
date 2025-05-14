@@ -147,6 +147,11 @@ func (s *Storage) UnlockVault(masterPassword string) error {
 	s.vault.Salt = salt
 	s.key = key
 
+	// Ensure all accounts have valid sort orders
+	if err := s.ensureAccountSortOrders(); err != nil {
+		return err
+	}
+
 	return nil // Unlocked successfully
 }
 
@@ -228,7 +233,19 @@ func (s *Storage) GetAccounts() ([]*model.Account, error) {
 		return nil, err
 	}
 
-	return s.vault.Accounts, nil
+	// Return a copy of the accounts slice to avoid external modifications
+	accountsCopy := make([]*model.Account, len(s.vault.Accounts))
+	copy(accountsCopy, s.vault.Accounts)
+
+	// Sort accounts by sort order
+	slices.SortStableFunc(accountsCopy, func(a, b *model.Account) int {
+		return a.SortOrder - b.SortOrder
+	})
+
+	// Return sorted accounts
+	// Note: This is a shallow copy; if accounts are modified, it won't affect the original vault.
+
+	return accountsCopy, nil
 }
 
 // GetAccountByID retrieves a specific account by ID from the unlocked vault.
@@ -402,6 +419,15 @@ func (s *Storage) ImportVault(importPath string) error {
 		return errors.Wrap(err, "failed to finalize import operation")
 	}
 
+	// Remove the call to s.ensureAccountSortOrders() from the ImportVault function.
+	// The sort order migration for the imported accounts will naturally occur the next time
+	// the user successfully unlocks this imported vault.
+
+	// // Ensure all imported accounts have valid sort orders
+	// if err := s.ensureAccountSortOrders(); err != nil {
+	// 	return errors.Wrap(err, "failed to ensure account sort orders")
+	// }
+
 	// Reset in-memory state (lock)
 	s.vault = nil
 	s.key = nil
@@ -549,7 +575,8 @@ func (s *Storage) SearchAccounts(query string) ([]*model.Account, error) {
 	}
 
 	if query == "" {
-		return s.vault.Accounts, nil // Return all if query is empty
+		//return s.vault.Accounts, nil // Return all if query is empty
+		return s.GetAccounts() // Return all accounts
 	}
 
 	query = strings.ToLower(query)
@@ -565,6 +592,11 @@ func (s *Storage) SearchAccounts(query string) ([]*model.Account, error) {
 			results = append(results, account)
 		}
 	}
+
+	// Sort results by sort order
+	slices.SortStableFunc(results, func(a, b *model.Account) int {
+		return a.SortOrder - b.SortOrder
+	})
 
 	return results, nil
 }
@@ -599,5 +631,43 @@ func (s *Storage) checkVaultUnlocked() error {
 	if s.vault == nil || s.key == nil {
 		return errors.ErrVaultLocked
 	}
+	return nil
+}
+
+// ensureAccountSortOrders ensures all accounts have a valid sort order.
+func (s *Storage) ensureAccountSortOrders() error {
+	// Check if all accounts have a default sort order (0), indicating old data
+	// needs migration
+	allZeroOrder := true
+	for _, acc := range s.vault.Accounts {
+		if acc.SortOrder != 0 {
+			allZeroOrder = false
+			break
+		}
+	}
+
+	// If all accounts have a sort order of 0, we need to assign new sort orders
+	if allZeroOrder && len(s.vault.Accounts) > 0 {
+		// Sort accounts by creation date
+		slices.SortStableFunc(s.vault.Accounts, func(a, b *model.Account) int {
+			return a.CreatedAt.Compare(b.CreatedAt)
+		})
+
+		// Assign sort orders based on index
+		for i, acc := range s.vault.Accounts {
+			acc.SortOrder = i + 1 // Start from 1
+		}
+
+		// Get current hash for saving
+		hash, err := s.getMasterKeyHashForSave()
+		if err != nil {
+			return errors.Wrap(err, "failed to get master key hash")
+		}
+		defer crypto.ClearBytes(hash)
+
+		// Save updated vault with new sort orders
+		return s.saveVault(hash)
+	}
+
 	return nil
 }

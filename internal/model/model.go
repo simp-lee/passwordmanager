@@ -14,6 +14,7 @@ type Account struct {
 	Notes             string    `json:"notes,omitempty"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
+	SortOrder         int       `json:"sort_order"`
 }
 
 // Vault represents the password vault containing all accounts

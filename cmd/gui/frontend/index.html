@@ -7,7 +7,40 @@
     <title>密码管理器</title>
     <script src="./js/tailwindcss_3.4.16.js"></script>
     <script defer src="./js/alpinejs_3.x.x.js"></script>
+    <script src="./js/sortable.min.js"></script>
     <script src="./js/app.js"></script>
+    <style>
+        /* 基础交互样式 */
+        .drag-handle {
+            @apply cursor-grab opacity-40 transition-all duration-200;
+        }
+
+        .account-item:hover .drag-handle {
+            @apply opacity-80;
+        }
+
+        /* 搜索模式 */
+        .search-mode .drag-handle {
+            @apply cursor-not-allowed opacity-30 hover:opacity-30;
+        }
+
+        /* 拖拽状态 - 简洁优雅版 */
+        .sortable-chosen {
+            @apply bg-blue-50/80 shadow-md border border-blue-300 !important;
+            transform: scale(1.01);
+            transition: all 0.2s ease;
+        }
+
+        .sortable-ghost {
+            @apply bg-gray-100/70 border border-dashed border-gray-400 !important;
+            opacity: 0.7;
+        }
+
+        /* 拖拽中全局光标 */
+        .cursor-grabbing {
+            cursor: grabbing !important;
+        }
+    </style>
 </head>
 
 <body class="bg-gray-100">
@@ -96,11 +129,20 @@
             <!-- 账户列表 -->
             <div class="flex-1 overflow-y-auto p-3">
                 <h2 class="text-xs uppercase tracking-wider text-gray-400 mb-2">账户</h2>
-                <div class="space-y-1">
+                <div class="space-y-1" id="accounts-list" x-ref="accountsList">
                     <template x-for="account in filteredAccounts" :key="account.id">
                         <div @click="selectAccount(account.id)"
-                            class="p-3 rounded cursor-pointer hover:bg-gray-700 border border-transparent flex items-center"
-                            :class="selectedAccountId === account.id ? 'bg-gray-700 border-gray-500' : ''">
+                            class="p-3 rounded cursor-pointer hover:bg-gray-700 border border-transparent flex items-center account-item"
+                            :class="selectedAccountId === account.id ? 'bg-gray-700 border-gray-500' : ''"
+                            :data-id="account.id">
+                            <!-- 拖拽手柄 - 简化样式，确保稳定显示 -->
+                            <div class="mr-2 cursor-move drag-handle">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-500" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 6h16M4 12h16M4 18h16" />
+                                </svg>
+                            </div>
                             <!-- 账户图标/首字母 -->
                             <div
                                 class="w-8 h-8 flex-shrink-0 rounded-full bg-blue-600 flex items-center justify-center mr-2">
@@ -149,7 +191,8 @@
                         <div class="border-b bg-gray-50 p-6 sticky top-0 z-10">
                             <div class="flex justify-between items-center">
                                 <div class="flex items-center">
-                                    <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center mr-3">
+                                    <div
+                                        class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center mr-3">
                                         <span x-text="selectedAccount.platform.charAt(0).toUpperCase()"
                                             class="font-bold text-lg text-white"></span>
                                     </div>
@@ -280,10 +323,10 @@
                         </svg>
                         <h2 class="text-xl mt-4 mb-2 font-medium text-gray-700">还没有选择账户</h2>
                         <p class="text-gray-500 mb-6">请从左侧选择一个账户查看详情，或添加一个新账户</p>
-                        <button @click="newAccount()" 
+                        <button @click="newAccount()"
                             class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded flex items-center mx-auto">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M12 4v16m8-8H4"></path>
                             </svg>
                             添加账户

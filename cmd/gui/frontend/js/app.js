@@ -52,12 +52,122 @@ document.addEventListener('alpine:init', () => {
             ExcludeAmbiguous: false,
         },
 
-        // 初始化方法保持不变
+        // 排序相关变量
+        sortable: null,
+
+        // 初始化方法
         async init() {
             try {
                 this.isVaultExists = await window.go.backend.App.IsVaultExists();
             } catch (error) {
                 console.error('初始化错误:', error);
+            }
+
+            // 监听搜索输入变化
+            this.$watch('searchQuery', (newValue, oldValue) => {
+                // 如果输入从有到无，重新初始化排序
+                if (oldValue && !newValue) {
+                    this.$nextTick(() => {
+                        this.initSortable();
+                    });
+                }
+            });
+
+            // 监听过滤列表变化（如果有的话）
+            this.$watch('filteredAccounts.length', () => {
+                this.$nextTick(() => {
+                    this.initSortable();
+                });
+            });
+        },
+
+        // 初始化拖拽排序
+        initSortable() {
+            // 销毁已有实例
+            if (this.sortable) {
+                this.sortable.destroy();
+                this.sortable = null;
+            }
+
+            const el = document.getElementById('accounts-list');
+            if (!el || !this.isUnlocked) return;
+
+            // 搜索模式下禁用排序并添加视觉提示
+            if (this.searchQuery && this.searchQuery.trim()) {
+                el.classList.add('search-mode');
+
+                // 为所有拖拽手柄添加提示
+                const dragHandles = document.querySelectorAll('.drag-handle');
+                dragHandles.forEach(handle => {
+                    handle.setAttribute('title', '清空搜索后可排序账户');
+                });
+
+                // 移除可能存在的旧提示文本
+                const existingWarning = document.querySelector('.search-sort-warning');
+                if (existingWarning) {
+                    existingWarning.remove();
+                }
+
+                return; // 不初始化排序
+            } else {
+                el.classList.remove('search-mode');
+
+                // 移除可能存在的旧提示
+                const existingWarning = document.querySelector('.search-sort-warning');
+                if (existingWarning) {
+                    existingWarning.remove();
+                }
+
+                // 移除工具提示
+                const dragHandles = document.querySelectorAll('.drag-handle');
+                dragHandles.forEach(handle => {
+                    handle.removeAttribute('title');
+                });
+            }
+
+            // 初始化 Sortable
+            this.sortable = new Sortable(el, {
+                animation: 150, // 动画持续时间
+                ghostClass: 'sortable-ghost', // 拖动时"影子"元素的样式
+                chosenClass: 'sortable-chosen', // 被选中项的样式
+                dragClass: "sortable-drag", // 拖动时元素的样式
+                handle: '.drag-handle',
+                scrollSensitivity: 30, // 滚动灵敏度
+                scrollSpeed: 10,       // 滚动速度
+
+                onStart: (evt) => {
+                    // 开始拖动时，修改鼠标样式
+                    document.body.classList.add('cursor-grabbing');
+                },
+                onEnd: (evt) => {
+                    // 结束拖动时，恢复鼠标样式
+                    document.body.classList.remove('cursor-grabbing');
+
+                    // 仅在解锁状态下保存排序
+                    if (this.isUnlocked && !this.searchQuery.trim()) {
+                        this.saveAccountsOrder();
+                    }
+                }
+            });
+        },
+
+        // 保存账户排序
+        async saveAccountsOrder() {
+            if (!this.isUnlocked) return;
+
+            try {
+                // 获取当前排序顺序
+                const accountItems = document.querySelectorAll('.account-item');
+                const newOrder = Array.from(accountItems).map(item => item.getAttribute('data-id'));
+
+                // 发送到后端，但不立即重新加载全部数据
+                await window.go.backend.App.UpdateAccountsOrder(newOrder);
+
+                // 保持现有DOM顺序，不重新初始化
+                this.showNotification('排序已保存');
+            } catch (error) {
+                console.error('保存排序失败:', error);
+                this.showNotification('排序保存失败');
             }
         },
 
@@ -123,8 +233,20 @@ document.addEventListener('alpine:init', () => {
 
         async loadAccounts() {
             try {
+                // 销毁旧的sortable实例
+                if (this.sortable) {
+                    this.sortable.destroy();
+                    this.sortable = null;
+                }
+
+                // 从后端加载数据
                 this.accounts = await window.go.backend.App.GetAccounts();
                 this.filteredAccounts = [...this.accounts];
+
+                // 加载后（重新）初始化排序功能
+                this.$nextTick(() => {
+                    this.initSortable();
+                });
             } catch (error) {
                 console.error('加载账户错误:', error);
                 this.showNotification('加载账户失败');
@@ -322,19 +444,46 @@ document.addEventListener('alpine:init', () => {
         },
 
         async searchAccounts() {
+            // 销毁现有排序实例
+            if (this.sortable) {
+                this.sortable.destroy();
+                this.sortable = null;
+            }
+
             if (!this.searchQuery.trim()) {
+                // 清空搜索时，显示所有账户
                 this.filteredAccounts = [...this.accounts];
             } else {
                 try {
+                    // 尝试使用后端搜索
                     this.filteredAccounts = await window.go.backend.App.SearchAccounts(this.searchQuery);
                 } catch (error) {
                     console.error('搜索账户错误:', error);
                     this.showNotification('搜索账户失败');
+
+                    // 降级到前端搜索
                     this.filteredAccounts = this.accounts.filter(account =>
                         account.platform.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
                         (account.username && account.username.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
-                        (account.email && account.email.toLowerCase().includes(this.searchQuery.toLowerCase()))
+                        (account.email && account.email.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+                        (account.url && account.url.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+                        (account.notes && account.notes.toLowerCase().includes(this.searchQuery.toLowerCase()))
                     );
+                }
+            }
+
+            // 在搜索结果更新后重新初始化排序功能
+            this.$nextTick(() => {
+                this.initSortable();
+            });
+
+            // 更新搜索模式的样式
+            const el = document.getElementById('accounts-list');
+            if (el) {
+                if (this.searchQuery.trim()) {
+                    el.classList.add('search-mode');
+                } else {
+                    el.classList.remove('search-mode');
                 }
             }
         },
