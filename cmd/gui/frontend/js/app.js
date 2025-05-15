@@ -8,6 +8,7 @@ document.addEventListener('alpine:init', () => {
         errorMessage: '',
         accounts: [],
         filteredAccounts: [],
+        allAccounts: [], // 用于存储所有账户的原始数据
         selectedAccountId: null,
         selectedAccount: null,
         decryptedPassword: '',
@@ -21,6 +22,7 @@ document.addEventListener('alpine:init', () => {
             email: '',
             url: '',
             notes: '',
+            group: '',
         },
         editingPassword: '',
         showEditPassword: false,
@@ -55,6 +57,11 @@ document.addEventListener('alpine:init', () => {
         // 排序相关变量
         sortable: null,
 
+        // 分组相关变量
+        groups: [],
+        selectedGroup: null,
+        showAllAccounts: true,
+
         // 初始化方法
         async init() {
             try {
@@ -67,18 +74,21 @@ document.addEventListener('alpine:init', () => {
             this.$watch('searchQuery', (newValue, oldValue) => {
                 // 如果输入从有到无，重新初始化排序
                 if (oldValue && !newValue) {
-                    this.$nextTick(() => {
-                        this.initSortable();
-                    });
+                    // 根据当前模式选择加载方式
+                    if (!this.showAllAccounts && this.selectedGroup !== null) {
+                        this.loadAccountsByGroup(this.selectedGroup);
+                    } else {
+                        this.loadAccounts();
+                    }
                 }
             });
 
-            // 监听过滤列表变化（如果有的话）
-            this.$watch('filteredAccounts.length', () => {
-                this.$nextTick(() => {
-                    this.initSortable();
-                });
-            });
+            // // 监听过滤列表变化（如果有的话）
+            // this.$watch('filteredAccounts.length', () => {
+            //     this.$nextTick(() => {
+            //         this.initSortable();
+            //     });
+            // });
         },
 
         // 初始化拖拽排序
@@ -92,31 +102,30 @@ document.addEventListener('alpine:init', () => {
             const el = document.getElementById('accounts-list');
             if (!el || !this.isUnlocked) return;
 
+            // 分组排序模式标记
+            if (!this.showAllAccounts && this.selectedGroup !== null) {
+                el.classList.add('group-sort-mode');
+            } else {
+                el.classList.remove('group-sort-mode');
+            }
+
             // 搜索模式下禁用排序并添加视觉提示
             if (this.searchQuery && this.searchQuery.trim()) {
                 el.classList.add('search-mode');
 
                 // 为所有拖拽手柄添加提示
                 const dragHandles = document.querySelectorAll('.drag-handle');
-                dragHandles.forEach(handle => {
-                    handle.setAttribute('title', '清空搜索后可排序账户');
-                });
+                // 设置分组内搜索提示
+                const tipText = !this.showAllAccounts && this.selectedGroup !== null ?
+                    '分组内搜索中，清空搜索后可排序' : '清空搜索后可排序账户';
 
-                // 移除可能存在的旧提示文本
-                const existingWarning = document.querySelector('.search-sort-warning');
-                if (existingWarning) {
-                    existingWarning.remove();
-                }
+                dragHandles.forEach(handle => {
+                    handle.setAttribute('title', tipText);
+                });
 
                 return; // 不初始化排序
             } else {
                 el.classList.remove('search-mode');
-
-                // 移除可能存在的旧提示
-                const existingWarning = document.querySelector('.search-sort-warning');
-                if (existingWarning) {
-                    existingWarning.remove();
-                }
 
                 // 移除工具提示
                 const dragHandles = document.querySelectorAll('.drag-handle');
@@ -160,24 +169,100 @@ document.addEventListener('alpine:init', () => {
                 const accountItems = document.querySelectorAll('.account-item');
                 const newOrder = Array.from(accountItems).map(item => item.getAttribute('data-id'));
 
-                // 发送到后端，但不立即重新加载全部数据
-                await window.go.backend.App.UpdateAccountsOrder(newOrder);
+                // 如果是分组排序
+                if (!this.showAllAccounts && this.selectedGroup !== null) {
+                    await window.go.backend.App.UpdateAccountsOrderInGroup(newOrder, this.selectedGroup);
 
-                // 保持现有DOM顺序，不重新初始化
-                this.showNotification('排序已保存');
+                    // 针对未分组情况显示特定消息
+                    if (this.selectedGroup === '') {
+                        this.showNotification('未分组账户排序已保存');
+                    } else {
+                        this.showNotification(`"${this.selectedGroup}"分组内排序已保存`);
+                    }
+                } else {
+                    // 全局排序
+                    await window.go.backend.App.UpdateAccountsOrder(newOrder);
+                    this.showNotification('账户排序已保存');
+                }
             } catch (error) {
                 console.error('保存排序失败:', error);
                 this.showNotification('排序保存失败');
             }
         },
 
-        // 保留所有原有的方法
+        // 解锁后加载分组
+        async loadGroups() {
+            try {
+                this.groups = await window.go.backend.App.GetAllGroups();
+            } catch (error) {
+                console.error('加载分组失败:', error);
+            }
+        },
+
+        // 修改选择分组的方法
+        selectGroup(group) {
+            // 如果点击的是当前已选中的分组，不做任何操作
+            if (this.selectedGroup === group) {
+                return;
+            }
+
+            this.selectedGroup = group;
+            this.showAllAccounts = false;
+            this.searchQuery = '';
+            this.loadAccountsByGroup(group);
+        },
+
+        // 显示所有账户
+        viewAllAccounts() {
+            // 如果已经在查看所有账户，不重新加载数据
+            if (this.showAllAccounts && this.selectedGroup === null) {
+                return;
+            }
+
+            this.showAllAccounts = true;
+            this.selectedGroup = null;
+            this.searchQuery = '';
+            this.loadAccounts();
+        },
+
+        // 根据分组加载账户
+        async loadAccountsByGroup(group) {
+            try {
+                // 销毁旧的sortable实例
+                if (this.sortable) {
+                    this.sortable.destroy();
+                    this.sortable = null;
+                }
+
+                // 将 filteredAccounts 置空，通知 Alpine.js 数据已清空
+                this.filteredAccounts = [];
+                // 等待 Alpine.js 处理 DOM 更新（列表变空）
+                await this.$nextTick();
+
+                const loadedAccounts = await window.go.backend.App.GetAccountsByGroup(group);
+                this.accounts = loadedAccounts; // 更新原始数据源 (如果你的逻辑依赖这个)
+                this.filteredAccounts = [...loadedAccounts]; // 使用从后端加载的、已排序的数据填充
+
+                // 在视图切换或账户修改后更新全局账户列表
+                const allAccounts = await window.go.backend.App.GetAccounts();
+                this.allAccounts = allAccounts;
+
+                // 加载后（重新）初始化排序功能
+                this.$nextTick(() => {
+                    this.initSortable();
+                });
+            } catch (error) {
+                console.error('加载分组账户失败:', error);
+            }
+        },
+
         async unlockVault() {
             try {
                 await window.go.backend.App.UnlockVault(this.masterPassword);
                 this.isUnlocked = true;
                 this.errorMessage = '';
                 this.masterPassword = '';
+                await this.loadGroups();
                 await this.loadAccounts();
                 this.showNotification('密码库已解锁');
             } catch (error) {
@@ -192,6 +277,7 @@ document.addEventListener('alpine:init', () => {
             this.selectedAccountId = null;
             this.accounts = [];
             this.filteredAccounts = [];
+            this.allAccounts = [];
             this.masterPassword = '';
 
             // 重新检查密码库是否存在
@@ -239,9 +325,14 @@ document.addEventListener('alpine:init', () => {
                     this.sortable = null;
                 }
 
+                this.filteredAccounts = [];
+                await this.$nextTick();
+
                 // 从后端加载数据
-                this.accounts = await window.go.backend.App.GetAccounts();
-                this.filteredAccounts = [...this.accounts];
+                const loadedAccounts = await window.go.backend.App.GetAccounts();
+                this.accounts = loadedAccounts;
+                this.allAccounts = [...loadedAccounts];
+                this.filteredAccounts = [...loadedAccounts];
 
                 // 加载后（重新）初始化排序功能
                 this.$nextTick(() => {
@@ -336,7 +427,6 @@ document.addEventListener('alpine:init', () => {
 
         async saveAccount() {
             if (!this.editingAccount.platform) {
-                this.showNotification('平台/网站名称是必填项');
                 return;
             }
 
@@ -358,14 +448,24 @@ document.addEventListener('alpine:init', () => {
                 // 关闭编辑界面，避免在加载期间出现问题
                 this.isEditing = false;
 
+                // 保存账户后刷新分组列表
+                await this.loadGroups();
+
                 // 重新加载所有账户
-                await this.loadAccounts();
+                // await this.loadAccounts();
+
+                // 如果当前正在查看分组，刷新当前分组的账户
+                if (!this.showAllAccounts && this.selectedGroup !== null) {
+                    await this.loadAccountsByGroup(this.selectedGroup);
+                } else {
+                    await this.loadAccounts();
+                }
 
                 if (!isNew) {
                     // 编辑情况：选择原始ID的账户
                     this.selectAccount(originalId);
                 } else {
-                    // 新增情况：根据平台名和用户名匹配新添加的账户
+                    // 根据平台名和用户名匹配新添加的账户
                     const matchedAccount = this.accounts.find(acc =>
                         acc.platform === platformName &&
                         acc.username === username
@@ -389,6 +489,10 @@ document.addEventListener('alpine:init', () => {
             try {
                 await window.go.backend.App.DeleteAccount(this.selectedAccountId);
                 this.showNotification('账户已删除');
+
+                // 删除账户后重新加载分组
+                await this.loadGroups();
+
                 await this.loadAccounts();
                 this.selectedAccount = null;
                 this.selectedAccountId = null;
@@ -455,20 +559,54 @@ document.addEventListener('alpine:init', () => {
                 this.filteredAccounts = [...this.accounts];
             } else {
                 try {
-                    // 尝试使用后端搜索
-                    this.filteredAccounts = await window.go.backend.App.SearchAccounts(this.searchQuery);
+                    // 根据当前视图状态选择适当的搜索API
+                    if (!this.showAllAccounts) {
+                        // 分组内搜索（同时处理特定分组和未分组情况）
+                        this.filteredAccounts = await window.go.backend.App.SearchAccountsInGroup(
+                            this.searchQuery,
+                            this.selectedGroup
+                        );
+                    } else {
+                        // 全局搜索
+                        this.filteredAccounts = await window.go.backend.App.SearchAccounts(this.searchQuery);
+                    }
                 } catch (error) {
                     console.error('搜索账户错误:', error);
                     this.showNotification('搜索账户失败');
 
                     // 降级到前端搜索
-                    this.filteredAccounts = this.accounts.filter(account =>
-                        account.platform.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-                        (account.username && account.username.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
-                        (account.email && account.email.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
-                        (account.url && account.url.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
-                        (account.notes && account.notes.toLowerCase().includes(this.searchQuery.toLowerCase()))
-                    );
+                    if (!this.showAllAccounts) {
+                        // 如果在"未分组"模式下，只搜索未分组账户
+                        if (this.selectedGroup === '') {
+                            this.filteredAccounts = this.accounts.filter(account =>
+                                (!account.group || account.group === '') &&
+                                (account.platform.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+                                    (account.username && account.username.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+                                    (account.email && account.email.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+                                    (account.url && account.url.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+                                    (account.notes && account.notes.toLowerCase().includes(this.searchQuery.toLowerCase())))
+                            );
+                        } else {
+                            // 其他特定分组搜索
+                            this.filteredAccounts = this.accounts.filter(account =>
+                                account.group === this.selectedGroup &&
+                                (account.platform.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+                                    (account.username && account.username.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+                                    (account.email && account.email.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+                                    (account.url && account.url.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+                                    (account.notes && account.notes.toLowerCase().includes(this.searchQuery.toLowerCase())))
+                            );
+                        }
+                    } else {
+                        // 全局搜索 - 原有的前端搜索逻辑
+                        this.filteredAccounts = this.accounts.filter(account =>
+                            account.platform.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+                            (account.username && account.username.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+                            (account.email && account.email.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+                            (account.url && account.url.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+                            (account.notes && account.notes.toLowerCase().includes(this.searchQuery.toLowerCase()))
+                        );
+                    }
                 }
             }
 
@@ -548,6 +686,7 @@ document.addEventListener('alpine:init', () => {
 
             try {
                 await window.go.backend.App.ImportVault();
+                await this.loadGroups();
                 await this.loadAccounts();
                 this.showNotification('密码库已成功导入');
             } catch (error) {

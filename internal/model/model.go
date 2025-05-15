@@ -12,6 +12,7 @@ type Account struct {
 	EncryptedPassword string    `json:"encrypted_password"` // Password encrypted with the master key
 	URL               string    `json:"url,omitempty"`
 	Notes             string    `json:"notes,omitempty"`
+	Group             string    `json:"group,omitempty"` // Group or category for the account
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
 	SortOrder         int       `json:"sort_order"`

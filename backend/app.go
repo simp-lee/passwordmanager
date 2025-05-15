@@ -5,8 +5,10 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -385,4 +387,137 @@ func (a *App) UpdateAccountsOrder(accountIDs []string) error {
 	}
 
 	return nil
+}
+
+func (a *App) GetAllGroups() ([]string, error) {
+	if !a.isUnlocked {
+		return nil, errors.ErrVaultLocked
+	}
+
+	accounts, err := a.store.GetAccounts()
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a map to store unique groups
+	groupMap := make(map[string]bool)
+	for _, account := range accounts {
+		if account.Group != "" {
+			groupMap[account.Group] = true
+		}
+	}
+
+	// Convert map keys to a slice
+	groups := make([]string, 0, len(groupMap))
+	for group := range groupMap {
+		groups = append(groups, group)
+	}
+
+	// Sort groups alphabetically
+	sort.Strings(groups)
+
+	return groups, nil
+}
+
+func (a *App) GetAccountsByGroup(group string) ([]*model.Account, error) {
+	if !a.isUnlocked {
+		return nil, errors.ErrVaultLocked
+	}
+
+	accounts, err := a.store.GetAccounts()
+	if err != nil {
+		return nil, err
+	}
+
+	var result []*model.Account
+
+	// Filter accounts by group
+	for _, account := range accounts {
+		if (group == "" && account.Group == "") || (account.Group == group) {
+			result = append(result, account)
+		}
+	}
+
+	// 确保按排序顺序返回
+	sort.SliceStable(result, func(i, j int) bool {
+		return result[i].SortOrder < result[j].SortOrder
+	})
+
+	return result, nil
+}
+
+// UpdateAccountsOrderInGroup 更新指定分组内账户的排序顺序
+func (a *App) UpdateAccountsOrderInGroup(accountIDs []string, group string) error {
+	if !a.isUnlocked {
+		return errors.ErrVaultLocked
+	}
+
+	allAccounts, err := a.store.GetAccounts()
+	if err != nil {
+		return err
+	}
+
+	// 创建ID到账户的映射
+	accountMap := make(map[string]*model.Account)
+	for _, account := range allAccounts {
+		accountMap[account.ID] = account
+	}
+
+	// 查找该分组最小排序值 - 保持分组在全局排序中的位置
+	minSortOrder := math.MaxInt32 // Initialize to max int
+	for _, account := range allAccounts {
+		if account.Group == group && account.SortOrder < minSortOrder {
+			minSortOrder = account.SortOrder
+		}
+	}
+
+	if minSortOrder == math.MaxInt32 {
+		minSortOrder = 1 // No accounts in the group, set to 1
+	}
+
+	// Update each account's sort order in the group
+	for i, id := range accountIDs {
+		account, ok := accountMap[id]
+		if !ok {
+			return errors.ErrAccountNotFound
+		}
+
+		if account.Group != group {
+			return fmt.Errorf("account %s does not belong to group %s", id, group)
+		}
+
+		account.SortOrder = minSortOrder + i
+		if err := a.store.UpdateAccount(account); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// SearchAccountsInGroup 在指定分组内搜索账户
+func (a *App) SearchAccountsInGroup(query string, group string) ([]*model.Account, error) {
+	if !a.isUnlocked {
+		return nil, errors.ErrVaultLocked
+	}
+
+	// 先搜索所有符合条件的账户
+	allMatches, err := a.store.SearchAccounts(query)
+	if err != nil {
+		return nil, err
+	}
+
+	// 过滤账户 - 根据分组条件
+	var results []*model.Account
+	for _, account := range allMatches {
+		// 未分组筛选 - group为空时只返回未分组账户
+		if group == "" && account.Group == "" {
+			results = append(results, account)
+		} else if account.Group == group {
+			// 特定分组筛选
+			results = append(results, account)
+		}
+	}
+
+	return results, nil
 }
