@@ -531,7 +531,7 @@ func (s *Storage) ExportToCSV(exportPath string) error {
 	defer writer.Flush()
 
 	// Write header
-	header := []string{"ID", "Platform", "Username", "Email", "Password", "URL", "Notes", "CreatedAt", "UpdatedAt"}
+	header := []string{"ID", "Platform", "Username", "Email", "Password", "URL", "Notes", "Group", "SortOrder", "CreatedAt", "UpdatedAt"}
 	if err := writer.Write(header); err != nil {
 		return errors.Wrap(err, "failed to write CSV header")
 	}
@@ -548,7 +548,7 @@ func (s *Storage) ExportToCSV(exportPath string) error {
 		record := []string{
 			account.ID, account.Platform, account.Username, account.Email,
 			string(decryptedPassword), // Plain text password!
-			account.URL, account.Notes,
+			account.URL, account.Notes, account.Group, fmt.Sprintf("%d", account.SortOrder),
 			account.CreatedAt.Format(time.RFC3339),
 			account.UpdatedAt.Format(time.RFC3339),
 		}
